@@ -8,6 +8,8 @@ This application is designed following a layered pattern which includes:
 - A Service layer that takes care of collecting information, performing business validations and doing business operations.
 - A Client layer responsible for communication with external services. Currently only Rest clients are implemented.
 ## API
+**Swagger** documentation at: http://localhost:8080/swagger-ui.html
+
 The application responds to following request URI with given query parameters:
 
 http://{HOST}/{VERSION}/{CONTEXT}/interconnections?departure={departure}&arrival=
