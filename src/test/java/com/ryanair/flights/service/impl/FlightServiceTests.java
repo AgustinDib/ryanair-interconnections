@@ -1,6 +1,7 @@
 package com.ryanair.flights.service.impl;
 
 import com.ryanair.flights.exception.RestClientException;
+import com.ryanair.flights.exception.ServiceException;
 import com.ryanair.flights.exception.ValidationException;
 import com.ryanair.flights.model.*;
 import com.ryanair.flights.service.RouteServiceI;
@@ -65,7 +66,7 @@ public class FlightServiceTests {
      * responses 2 legs, departure airport "EZE" on leg 1 and    arrival airport "MDQ" on leg 2 are expected.
      */
     @Test
-    public void  findInterconnectionsHappyPath() throws RestClientException, ValidationException {
+    public void  findInterconnectionsHappyPath() throws RestClientException, ValidationException, ServiceException {
         List<Route> allRoutes = Stream.of(routeDep, routeArr, routeRand, routeDirect).collect(Collectors.toList());
         given(routeService.getRoutes()).willReturn(allRoutes);
         given(scheduleService.getSchedules("EZE",  "MDQ", jan2019, feb2019)).willReturn(schedules);
@@ -94,7 +95,7 @@ public class FlightServiceTests {
      * arrival airport "MDQ" on leg 2.
      */
     @Test
-    public void getConnectingFlightsHappyPath() throws RestClientException, ValidationException {
+    public void getConnectingFlightsHappyPath() throws ValidationException, ServiceException {
         List<Route> allRoutes = Stream.of(routeDep, routeArr, routeRand).collect(Collectors.toList());
         given(routeService.getConnectionRoutes("EZE", "MDQ", allRoutes)).willReturn(connections);
         given(scheduleService.getSchedules(any(), any(), any(), any())).willReturn(schedules);
@@ -114,7 +115,7 @@ public class FlightServiceTests {
      * Should return an empty List if there are no connections.
      */
     @Test
-    public void getConnectingFlightsNoConnections() throws RestClientException, ValidationException {
+    public void getConnectingFlightsNoConnections() throws ValidationException, ServiceException {
         List<Route> allRoutes = Stream.of(routeDep, routeArr, routeRand).collect(Collectors.toList());
         given(routeService.getConnectionRoutes("EZE", "MDQ", allRoutes)).willReturn(new ArrayList<>());
 
@@ -127,7 +128,7 @@ public class FlightServiceTests {
      * Should return an empty List if there are no Schedules for the given date range.
      */
     @Test
-    public void getConnectingFlightsNoSchedules() throws RestClientException, ValidationException {
+    public void getConnectingFlightsNoSchedules() throws ValidationException, ServiceException {
         List<Route> allRoutes = Stream.of(routeDep, routeArr, routeRand).collect(Collectors.toList());
         given(routeService.getConnectionRoutes("EZE", "MDQ", allRoutes)).willReturn(connections);
         given(scheduleService.getSchedules(any(), any(), any(), any())).willReturn(new ArrayList<>());
@@ -141,7 +142,7 @@ public class FlightServiceTests {
      * Should return a single FlightResponse and it's Legs.
      */
     @Test
-    public void getDirectFlightsHappyPath() throws RestClientException, ValidationException {
+    public void getDirectFlightsHappyPath() throws ValidationException, ServiceException {
         List<Schedule> schedules = Stream.of(scheduleJan, scheduleFeb).collect(Collectors.toList());
         given(scheduleService.getSchedules(any(), any(), any(), any())).willReturn(schedules);
 
@@ -155,7 +156,7 @@ public class FlightServiceTests {
      * Should return an empty List if there are no Schedules for the given parameters.
      */
     @Test
-    public void getDirectFlightsNoSchedules() throws RestClientException, ValidationException {
+    public void getDirectFlightsNoSchedules() throws ValidationException, ServiceException {
         given(scheduleService.getSchedules(any(), any(), any(), any())).willReturn(new ArrayList<>());
 
         FlightResponse result = flightService.getDirectFlights("EZE", "MDQ", jan2019, feb2019);

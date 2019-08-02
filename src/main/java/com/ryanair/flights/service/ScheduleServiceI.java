@@ -1,6 +1,6 @@
 package com.ryanair.flights.service;
 
-import com.ryanair.flights.exception.RestClientException;
+import com.ryanair.flights.exception.ServiceException;
 import com.ryanair.flights.exception.ValidationException;
 import com.ryanair.flights.model.Schedule;
 
@@ -16,9 +16,8 @@ public interface ScheduleServiceI {
      * @param departureDate expressed in LocalDateTime.
      * @param arrivalDate expressed in LocalDateTime.
      * @return a List of Schedule for the given date range.
-     * @throws RestClientException when rest client fails.
      * @throws ValidationException when date validation fails.
      */
     List<Schedule> getSchedules(String departure, String arrival, LocalDateTime departureDate,
-        LocalDateTime arrivalDate) throws RestClientException, ValidationException;
+        LocalDateTime arrivalDate) throws ValidationException, ServiceException;
 }

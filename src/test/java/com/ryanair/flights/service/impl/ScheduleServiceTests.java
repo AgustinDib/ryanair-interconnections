@@ -2,6 +2,7 @@ package com.ryanair.flights.service.impl;
 
 import com.ryanair.flights.client.ScheduleClient;
 import com.ryanair.flights.exception.RestClientException;
+import com.ryanair.flights.exception.ServiceException;
 import com.ryanair.flights.exception.ValidationException;
 import com.ryanair.flights.model.Day;
 import com.ryanair.flights.model.Flight;
@@ -69,7 +70,7 @@ public class ScheduleServiceTests {
      * getSchedules should get schedules within the same year.
      */
     @Test
-    public void getSchedulesSameYear() throws RestClientException, ValidationException {
+    public void getSchedulesSameYear() throws ValidationException, ServiceException {
         List<Schedule> result = scheduleService.getSchedules("EZE", "MDQ", jan2019, aug2019);
 
         Assert.assertTrue(result.size() == 8);
@@ -80,7 +81,7 @@ public class ScheduleServiceTests {
      * getSchedules should get schedules across different years.
      */
     @Test
-    public void getSchedulesSeveralYears() throws RestClientException, ValidationException {
+    public void getSchedulesSeveralYears() throws ValidationException, ServiceException {
         List<Schedule> result = scheduleService.getSchedules("EZE", "MDQ", jan2019, dec2020);
 
         Assert.assertTrue(result.size() == 24);
@@ -196,7 +197,7 @@ public class ScheduleServiceTests {
      */
     @Test
     public void getYearsRangeIncludeEdges() {
-        List<Integer> result = scheduleService.getYearsRange(from, to);
+        List<Integer> result = scheduleService.getRange(from.getYear(), to.getYear());
 
         Assert.assertTrue(result.size() == 4);
         Assert.assertTrue(result.get(0) == 2019);
@@ -208,7 +209,7 @@ public class ScheduleServiceTests {
      */
     @Test
     public void getYearsRangeSameYear() {
-        List<Integer> result = scheduleService.getYearsRange(from, fromSameYear);
+        List<Integer> result = scheduleService.getRange(from.getYear(), fromSameYear.getYear());
 
         Assert.assertTrue(result.size() == 1);
         Assert.assertTrue(result.get(0) == 2019);
@@ -219,7 +220,7 @@ public class ScheduleServiceTests {
      */
     @Test
     public void getYearsRangeInvertedDates() {
-        List<Integer> result = scheduleService.getYearsRange(to, from);
+        List<Integer> result = scheduleService.getRange(to.getYear(), from.getYear());
 
         Assert.assertTrue(result.size() == 0);
     }

@@ -1,5 +1,6 @@
 package com.ryanair.flights.service;
 
+import com.ryanair.flights.exception.ServiceException;
 import com.ryanair.flights.model.FlightResponse;
 import com.ryanair.flights.exception.RestClientException;
 import com.ryanair.flights.exception.ValidationException;
@@ -15,10 +16,11 @@ public interface FlightServiceI {
      * @param arrival airport expressed in IATA code.
      * @param departureDate in LocalDateTime.
      * @param arrivalDate in LocalDateTime.
-     * @returna List FlightResponse with Legs for no stops and one stop flights.
+     * @return a List FlightResponse with Legs for no stops and one stop flights.
      * @throws ValidationException when RestClient fails.
      * @throws ValidationException when input data is not valid.
+     * @throws ServiceException when business at service layer fail.
      */
     List<FlightResponse> findInterconnections(String departure, String arrival, LocalDateTime departureDate,
-        LocalDateTime arrivalDate) throws ValidationException, RestClientException;
+        LocalDateTime arrivalDate) throws ValidationException, RestClientException, ServiceException;
 }

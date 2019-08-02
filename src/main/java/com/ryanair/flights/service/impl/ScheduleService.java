@@ -2,6 +2,7 @@ package com.ryanair.flights.service.impl;
 
 import com.ryanair.flights.client.ScheduleClient;
 import com.ryanair.flights.exception.RestClientException;
+import com.ryanair.flights.exception.ServiceException;
 import com.ryanair.flights.exception.ValidationException;
 import com.ryanair.flights.model.Day;
 import com.ryanair.flights.model.Flight;
@@ -14,6 +15,8 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.*;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ForkJoinPool;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -22,10 +25,12 @@ import java.util.stream.IntStream;
 public class ScheduleService implements ScheduleServiceI {
 
     private final ScheduleClient scheduleClient;
+    private final ForkJoinPool threadPool;
 
     @Autowired
-    public ScheduleService(ScheduleClient scheduleClient) {
+    public ScheduleService(ScheduleClient scheduleClient, ForkJoinPool threadPool) {
         this.scheduleClient = scheduleClient;
+        this.threadPool = threadPool != null ? threadPool : new ForkJoinPool(4);
     }
 
     /**
@@ -35,16 +40,20 @@ public class ScheduleService implements ScheduleServiceI {
      * @param departureDate expressed in LocalDateTime.
      * @param arrivalDate expressed in LocalDateTime.
      * @return a List of Schedule for the given date range.
-     * @throws RestClientException when rest client fails.
      * @throws ValidationException when date validation fails.
      */
     @Override
     public List<Schedule> getSchedules(String departure, String arrival, LocalDateTime departureDate,
-        LocalDateTime arrivalDate) throws RestClientException, ValidationException {
+        LocalDateTime arrivalDate) throws ValidationException, ServiceException {
 
-        List<Schedule> schedules = departureDate.getYear() == arrivalDate.getYear()
-            ? getSchedulesForSameYear(departure, arrival, departureDate, arrivalDate)
-            : getSchedulesForSeveralYears(departure, arrival, departureDate, arrivalDate);
+        List<Schedule> schedules;
+        try {
+            schedules = departureDate.getYear() == arrivalDate.getYear()
+                    ? getSchedulesForSameYear(departure, arrival, departureDate, arrivalDate)
+                    : getSchedulesForSeveralYears(departure, arrival, departureDate, arrivalDate);
+        } catch (ExecutionException | InterruptedException e) {
+            throw new ServiceException("Error during Schedule fetching: " + e.getMessage(), e);
+        }
 
         return schedules.stream().map(s -> filterNonValid(s, departureDate, arrivalDate))
                 .filter(Optional::isPresent)
@@ -84,7 +93,7 @@ public class ScheduleService implements ScheduleServiceI {
             }
             schedule.setDays(days);
 
-        // Clean days and flights after arrival.
+            // Clean days and flights after arrival.
         } else if (scheduleYear == arrivalYear && scheduleMonth == arrivalMonth) {
             List<Day> days = removeDaysAfterArrival(schedule, arrival);
 
@@ -112,15 +121,15 @@ public class ScheduleService implements ScheduleServiceI {
 
     private List<Flight> removeFlightsBeforeDeparture(LocalDateTime departure, List<Day> days) {
         return days.get(0).getFlights().stream().filter(f -> {
-                Integer hours = Integer.valueOf(f.getDepartureTime().substring(0,2));
-                Integer minutes = Integer.valueOf(f.getDepartureTime().substring(3));
-                return LocalTime.of(hours, minutes).isAfter(departure.toLocalTime());
-            }).collect(Collectors.toList());
+            Integer hours = Integer.valueOf(f.getDepartureTime().substring(0,2));
+            Integer minutes = Integer.valueOf(f.getDepartureTime().substring(3));
+            return LocalTime.of(hours, minutes).isAfter(departure.toLocalTime());
+        }).collect(Collectors.toList());
     }
 
     private List<Day> removeDaysBeforeDeparture(Schedule schedule, LocalDateTime departure) {
         return schedule.getDays().stream().filter(d -> d.getDay() >= departure.getDayOfMonth())
-            .sorted(Comparator.comparingInt(Day::getDay)).collect(Collectors.toList());
+                .sorted(Comparator.comparingInt(Day::getDay)).collect(Collectors.toList());
     }
 
     /**
@@ -139,40 +148,35 @@ public class ScheduleService implements ScheduleServiceI {
      * @param departureDate in LocalDateTime.
      * @param arrivalDate in LocalDateTime.
      * @return a List of Schedule.
-     * @throws RestClientException when rest client fails.
      * @throws ValidationException when date validation fails.
+     * @throws ExecutionException when parallel processing fails.
+     * @throws InterruptedException when parallel processing fails.
      */
     List<Schedule> getSchedulesForSeveralYears(String departure, String arrival, LocalDateTime departureDate,
-        LocalDateTime arrivalDate) throws RestClientException, ValidationException {
+        LocalDateTime arrivalDate) throws ValidationException, ExecutionException, InterruptedException {
 
-        List<Schedule> schedules = new ArrayList<>();
-        List<Integer> years = getYearsRange(departureDate, arrivalDate);
-        if (years.size() == 0) {
+        List<Integer> years = getRange(departureDate.getYear(), arrivalDate.getYear());
+        if (years.size() <= 1) {
             String msg = "Date range is not valid for departure: " + departureDate + "and arrival: "+ arrivalDate + ".";
             throw new ValidationException(msg);
         }
-        int year = years.get(0);
-        int month = departureDate.getMonthValue();
+        int firstYear = years.get(0);
+        int lastYear = years.get(years.size() - 1);
+        List<Integer> inBetweenYears = years.size() > 2 ? getRange(firstYear + 1, lastYear - 1) : new ArrayList<>();
 
-        while (year <= years.get(years.size() - 1)) {
-            Optional<Schedule> schedule = scheduleClient.getSchedule(departure, arrival, year, month);
+        // Get schedules for first year.
+        List<Schedule> schedules = new ArrayList<>(getSchedulesForSameYear(departure, arrival, departureDate,
+                LocalDateTime.of(firstYear, 12, 31, 23, 59)));
 
-            if (schedule.isPresent()) {
-                schedule.get().setYear(year);
-                schedules.add(schedule.get());
-            }
-            month++;
-
-            if (month > 12) {
-                month = 1;
-                year++;
-            }
-            // Compare current searching date with departure date.
-            if (LocalDateTime.of(year, month, departureDate.getDayOfMonth(), departureDate.getHour(),
-                    departureDate.getMinute(), departureDate.getSecond()).isAfter(arrivalDate)) {
-                break;
-            }
+        // Get schedules for in between years.
+        for (Integer y : inBetweenYears) {
+            schedules.addAll(getSchedulesForSameYear(departure, arrival, LocalDateTime.of(y, 1, 1, 0, 0),
+                    LocalDateTime.of(y, 12, 31, 23, 59)));
         }
+        // Get schedules for last year.
+        schedules.addAll(getSchedulesForSameYear(departure, arrival, LocalDateTime.of(lastYear, 1, 1, 0, 0),
+                arrivalDate));
+
         return schedules;
     }
 
@@ -183,38 +187,38 @@ public class ScheduleService implements ScheduleServiceI {
      * @param departureDate in LocalDateTime.
      * @param arrivalDate in LocalDateTime.
      * @return a List of Schedule.
-     * @throws RestClientException when rest client fails.
-     * @throws ValidationException when date validation fails.
      */
     List<Schedule> getSchedulesForSameYear(String departure, String arrival, LocalDateTime departureDate,
-        LocalDateTime arrivalDate) throws RestClientException, ValidationException {
+        LocalDateTime arrivalDate) throws ValidationException, ExecutionException, InterruptedException {
 
         if (arrivalDate.isBefore(departureDate)) {
             String msg = "Date range is not valid for departure: " + departureDate + "and arrival: "+ arrivalDate + ".";
             throw new ValidationException(msg);
         }
 
-        List<Schedule> schedules = new ArrayList<>();
+        List<Integer> monthsRange = getRange(departureDate.getMonthValue(), arrivalDate.getMonthValue());
 
-        for (int month = departureDate.getMonthValue(); month <= arrivalDate.getMonthValue(); month++) {
-            Optional<Schedule> schedule = scheduleClient.getSchedule(departure, arrival, departureDate.getYear(), month);
-            if (schedule.isPresent()) {
-                schedule.get().setYear(departureDate.getYear());
-                schedules.add(schedule.get());
+        return threadPool.submit(() -> monthsRange.parallelStream().map(month -> {
+            Optional<Schedule> schedule = Optional.empty();
+            try {
+                schedule = scheduleClient.getSchedule(departure, arrival, departureDate.getYear(), month);
+                schedule.ifPresent(schedule1 -> schedule1.setYear(departureDate.getYear()));
+                return schedule;
+            } catch (RestClientException e) {
+                log.warn("Error getting schedules, status code: " + e.getHttpStatus() + ". Message: " + e.getMessage());
+                return schedule;
             }
-        }
-        return schedules;
+        }).filter(Optional::isPresent).map(Optional::get).collect(Collectors.toList())).get();
     }
 
     /**
-     * Gets all the yeares between two dates including edges.
-     * @param from expressed in LocalDateTime.
-     * @param to expressed in LocalDateTime.
-     * @return a List of Integer representing the range of years. For inverted dates returns an empty List.
+     * Gets all the items between two integers including edges.
+     * @param from expressed in Integer.
+     * @param to expressed in Integer.
+     * @return a List of Integer representing the range of numbers. For inverted numbers returns an empty List.
      */
-    List<Integer> getYearsRange(LocalDateTime from, LocalDateTime to) {
-        return from.getYear() == to.getYear()
-                ? Collections.singletonList(from.getYear())
-                : IntStream.rangeClosed(from.getYear(), to.getYear()).boxed().collect(Collectors.toList());
+    List<Integer> getRange(Integer from, Integer to) {
+        return Objects.equals(from, to) ? Collections.singletonList(from)
+                : IntStream.rangeClosed(from, to).boxed().collect(Collectors.toList());
     }
 }

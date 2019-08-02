@@ -1,8 +1,7 @@
 package com.ryanair.flights.service.impl;
 
-import com.ryanair.flights.model.FlightResponse;
-import com.ryanair.flights.model.Leg;
 import com.ryanair.flights.exception.RestClientException;
+import com.ryanair.flights.exception.ServiceException;
 import com.ryanair.flights.exception.ValidationException;
 import com.ryanair.flights.model.*;
 import com.ryanair.flights.service.FlightServiceI;
@@ -40,13 +39,14 @@ public class FlightService implements FlightServiceI {
      * @param arrival airport expressed in IATA code.
      * @param departureDate in LocalDateTime.
      * @param arrivalDate in LocalDateTime.
-     * @returna List FlightResponse with Legs for no stops and one stop flights.
-     * @throws ValidationException when RestClient fails.
+     * @return a List FlightResponse with Legs for no stops and one stop flights.
+     * @throws RestClientException when RestClient fails.
      * @throws ValidationException when input data is not valid.
+     * @throws ServiceException when business at service layer fail.
      */
     @Override
     public List<FlightResponse> findInterconnections(String departure, String arrival, LocalDateTime departureDate,
-         LocalDateTime arrivalDate) throws ValidationException, RestClientException {
+        LocalDateTime arrivalDate) throws ValidationException, RestClientException, ServiceException {
 
         flightServiceValidation.validateInterconnectionsParameters(departure, arrival, departureDate, arrivalDate);
 
@@ -54,10 +54,11 @@ public class FlightService implements FlightServiceI {
 
         // If direct routes exist, check for direct flights, else create an emtpy list of flights.
         FlightResponse directFlights = routeService.existDirectFlight(departure, arrival, allRoutes)
-            ? getDirectFlights(departure, arrival, departureDate, arrivalDate)
-            : new FlightResponse(0);
+                ? getDirectFlights(departure, arrival, departureDate, arrivalDate)
+                : new FlightResponse(0);
 
-        List<FlightResponse> connectingFlights = getConnectingFlights(departure, arrival, departureDate, arrivalDate, allRoutes);
+        List<FlightResponse> connectingFlights = getConnectingFlights(departure, arrival, departureDate, arrivalDate,
+                allRoutes);
 
         List<FlightResponse> responses = new ArrayList<>();
         responses.add(directFlights);
@@ -74,11 +75,11 @@ public class FlightService implements FlightServiceI {
      * @param arrivalDate in LocalDateTime.
      * @param allRoutes available to find connections from.
      * @return a List FlightResponse with Legs.
-     * @throws RestClientException when RestClient fails.
      * @throws ValidationException when input data is not valid.
+     * @throws ServiceException when business at service layer fail.
      */
     List<FlightResponse> getConnectingFlights(String departure, String arrival, LocalDateTime departureDate,
-        LocalDateTime arrivalDate, List<Route> allRoutes) throws RestClientException, ValidationException {
+        LocalDateTime arrivalDate, List<Route> allRoutes) throws ValidationException, ServiceException {
 
         List<ConnectionRoute> connectionRoutes = routeService.getConnectionRoutes(departure, arrival, allRoutes);
         List<FlightResponse> responses = new ArrayList<>();
@@ -95,9 +96,9 @@ public class FlightService implements FlightServiceI {
             for (Leg depLeg : departureLegs) {
                 LocalDateTime depFromConnection = depLeg.getArrivalDateTime().plusHours(2);
                 List<Leg> filteredArrivalLegs = arrivalLegs.stream()
-                    .filter(leg -> leg.getDepartureDateTime().isAfter(depFromConnection))
-                    .filter(leg -> leg.getDepartureAirport().equals(depLeg.getArrivalAirport()))
-                    .collect(Collectors.toList());
+                        .filter(leg -> leg.getDepartureDateTime().isAfter(depFromConnection))
+                        .filter(leg -> leg.getDepartureAirport().equals(depLeg.getArrivalAirport()))
+                        .collect(Collectors.toList());
 
                 for (Leg leg : filteredArrivalLegs) {
                     responses.add(new FlightResponse(1, Stream.of(depLeg, leg).collect(Collectors.toList())));
@@ -115,11 +116,10 @@ public class FlightService implements FlightServiceI {
      * @param departureDate in LocalDateTime.
      * @param arrivalDate in LocalDateTime.
      * @return a FlightResponse with Legs.
-     * @throws RestClientException when RestClient fails.
      * @throws ValidationException when input data is not valid.
      */
     FlightResponse getDirectFlights(String departure, String arrival, LocalDateTime departureDate,
-        LocalDateTime arrivalDate) throws RestClientException, ValidationException {
+        LocalDateTime arrivalDate) throws ValidationException, ServiceException {
 
         List<Schedule> schedules = scheduleService.getSchedules(departure, arrival, departureDate, arrivalDate);
         List<Leg> legs = new ArrayList<>();
