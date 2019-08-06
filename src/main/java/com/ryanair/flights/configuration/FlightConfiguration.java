@@ -30,8 +30,8 @@ public class FlightConfiguration {
     public Docket api() {
         return new Docket(DocumentationType.SWAGGER_2)
                 .select()
-                .apis(RequestHandlerSelectors.any())
-                .paths(PathSelectors.any())
+                .apis(RequestHandlerSelectors.basePackage("com.ryanair.flights.controller"))
+                .paths(PathSelectors.regex("/.*"))
                 .build();
     }
 

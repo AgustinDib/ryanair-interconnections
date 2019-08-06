@@ -3,6 +3,9 @@ package com.ryanair.flights.controller;
 import com.ryanair.flights.exception.RestClientException;
 import com.ryanair.flights.exception.ValidationException;
 import com.ryanair.flights.service.FlightServiceI;
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
+import io.swagger.annotations.ApiParam;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.CacheManager;
@@ -19,6 +22,7 @@ import javax.validation.constraints.NotNull;
 import java.time.LocalDateTime;
 
 @Slf4j
+@Api(value="Flight Controller", description="Flight related operations.")
 @RestController
 @RequestMapping("/v1/flight")
 class FlightController {
@@ -42,12 +46,13 @@ class FlightController {
      * @return a ResponseEntity with an HttpStatus and a List of FlightResponse for successful hits, or a body
      * explaining the problem for failures.
      */
+    @ApiOperation(value = "Gets interconnection flights.", response = ResponseEntity.class)
     @GetMapping("/interconnections")
     ResponseEntity<?> interconnections(
-        @NotNull @RequestParam("departure") String departure,
-        @NotNull @RequestParam("arrival") String arrival,
-        @NotNull @RequestParam("departureDateTime") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime depDate,
-        @NotNull @RequestParam("arrivalDateTime") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime arrDate
+        @ApiParam(value = "Departure airport expressed in IATA code") @NotNull @RequestParam("departure") String departure,
+        @NotNull @RequestParam("Arrival airport expressed in IATA code") String arrival,
+        @NotNull @RequestParam("Departure date in ISO.DATE_TIME format") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime depDate,
+        @NotNull @RequestParam("Arrival date in ISO.DATE_TIME format") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime arrDate
     ) {
         String logHeader = "FlightController.interconnections: ";
         log.info(logHeader + "request received for departure: " + departure + ", arrival: " + arrival +
