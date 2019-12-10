@@ -50,9 +50,9 @@ class FlightController {
     @GetMapping("/interconnections")
     ResponseEntity<?> interconnections(
         @ApiParam(value = "Departure airport expressed in IATA code") @NotNull @RequestParam("departure") String departure,
-        @NotNull @RequestParam("Arrival airport expressed in IATA code") String arrival,
-        @NotNull @RequestParam("Departure date in ISO.DATE_TIME format") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime depDate,
-        @NotNull @RequestParam("Arrival date in ISO.DATE_TIME format") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime arrDate
+        @ApiParam(value = "Arrival airport expressed in IATA code") @NotNull @RequestParam("arrival") String arrival,
+        @ApiParam(value = "Departure date in ISO.DATE_TIME format") @NotNull @RequestParam("depDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime depDate,
+        @ApiParam(value = "Arrival date in ISO.DATE_TIME format") @NotNull @RequestParam("arrDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime arrDate
     ) {
         String logHeader = "FlightController.interconnections: ";
         log.info(logHeader + "request received for departure: " + departure + ", arrival: " + arrival +

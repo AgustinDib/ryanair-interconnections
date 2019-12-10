@@ -4,12 +4,12 @@ import com.ryanair.flights.model.FlightResponse;
 import com.ryanair.flights.exception.RestClientException;
 import com.ryanair.flights.exception.ValidationException;
 import com.ryanair.flights.service.FlightServiceI;
-import jdk.nashorn.internal.runtime.regexp.joni.exception.ValueException;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.cache.CacheManager;
 import org.springframework.http.HttpStatus;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
@@ -33,8 +33,11 @@ public class FlightControllerTests {
     @MockBean
     private FlightServiceI flightService;
 
-    private String validUrl = ("/v1/flight/interconnections?departure=DUB&arrival=WRO&" +
-            "departureDateTime=2019-07-01T07:00&arrivalDateTime=2019-12-03T21:00");
+    @MockBean
+    private CacheManager cacheManager;
+
+    private String validUrl = ("/v1/flight/interconnections?departure=STN&arrival=MAD&" +
+            "depDate=2019-12-01T21:00:00.000-05:00&arrDate=2020-01-04T21:00:00.000-05:00");
     /**
      * Tests the case when flightService.findInterconnections returns a successful response. OK status should be
      * returned.
@@ -78,7 +81,7 @@ public class FlightControllerTests {
     @Test
     public void interconnectionsExceptionThrown() throws Exception {
         given(flightService.findInterconnections(any(), any(), any(), any()))
-                .willThrow(new ValueException(""));
+                .willThrow(new ArithmeticException(""));
 
         this.mockMvc.perform(get(validUrl)).andExpect(status().isInternalServerError());
     }
