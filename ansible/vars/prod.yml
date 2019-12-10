@@ -1,0 +1,28 @@
+ENV: PROD
+VPC: PROD
+
+destroy__deregister_old_amis: yes
+
+server_isProduction: false
+
+deploy__asg_scheduled_scaling: 'NO'
+
+dev_instance_access: 'NO'
+
+instance_type: t3.medium
+
+min_size: 2
+max_size: 20
+desired_capacity: 10
+
+diba__autoscaling__low_request_per_target: 700
+diba__autoscaling__high_request_per_target: 1200
+
+newrelic_license_key: '6a043227b486389104d535a324cd0572b1e68418'
+
+secure_user: fr-ops
+secure_pass: :~(C\Cg=LQg-hZV[QMbF~NX37k,q.Z[5YK7;W~%Kf'@\Q]GR}c-*M"mtX#5Heh)t$hF"UCSj>avJ9(B3DteH`S[HwW"4=J#:),2@`7pqpRFH`<S7u#Q\Y#//(T.^C+B$G9:w;mgEs(qp@>)!H>#DfVyCL2E&yG#hN]Gz'nmmp*3;"DQt<p2#}}"A7n_WXF#h{zCyFW)~V4"'mj!Cw9,-pxX*X$Y-*$#nfFW.h?V^;vUqzyzNh`8FV=bU(,2kg^Nv
+
+ryanair_baseUrl: "https://www.ryanair.com"
+
+

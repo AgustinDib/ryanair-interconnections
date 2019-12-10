@@ -1,0 +1,28 @@
+Policies:
+-
+  PolicyName: "tables"
+  PolicyDocument:
+    Version: "2012-10-17"
+    Statement:
+      -
+        Effect: "Allow"
+        Action:
+        - "dynamodb:BatchWriteItem"
+        - "dynamodb:DeleteItem"
+        - "dynamodb:PutItem"
+        - "dynamodb:UpdateItem"
+        Resource:
+        - !Sub "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${Company}-${Project}-*-${Environment}"
+-
+  PolicyName: "logs"
+  PolicyDocument:
+    Version: "2012-10-17"
+    Statement:
+      -
+        Effect: "Allow"
+        Action:
+        - "logs:CreateLogGroup"
+        - "logs:CreateLogStream"
+        - "logs:PutLogEvents"
+        - "logs:DescribeLogStreams"
+        Resource: "arn:aws:logs:*:*:*"

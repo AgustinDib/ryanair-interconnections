@@ -1,0 +1,21 @@
+ENV: OAT
+VPC: PROD
+
+destroy__deregister_old_amis: yes
+
+server_isProduction: false
+
+deploy__asg_scheduled_scaling: 'NO'
+
+dev_instance_access: 'NO'
+
+instance_type: t3.medium
+
+min_size: 2
+max_size: 20
+
+diba__autoscaling__low_request_per_target: 700
+diba__autoscaling__high_request_per_target: 1200
+
+ryanair_baseUrl: "https://oat-aem.ryanair.com"
+

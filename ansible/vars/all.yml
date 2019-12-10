@@ -1,0 +1,48 @@
+COMPANY: FR
+PROJECT: DIBA
+APP: API
+
+JAR_FILE: diba-web-*.jar
+
+CONFIG_ARG: spring.config.diba
+CONFIG_EXT: properties
+
+instance_type: t3.small
+
+elb_target_group: "{{ COMPANY }}-{{ PROJECT }}-{{ APP }}-{{ ENV }}-TG"
+
+use_elb_v2: true
+
+min_size: 1
+max_size: 1
+
+packer_ops_user: 'ec2-user'
+packer_working_dir: "/home/{{ packer_ops_user }}/tmp"
+
+ami_environments: ['dev', 'sit', 'oat', 'prod']
+encrypt_pass: "hub85,salons"
+
+deploy__asg_scheduled_scaling: 'YES'
+
+SHARED_VPC: yes
+
+cf_scaling_groups_template_dir: "{{ playbook_dir }}/../templates"
+instance_unlimited_cpu_credits: true
+
+diba__autoscaling__low_request_per_target: 1000
+diba__autoscaling__high_request_per_target: 2500
+
+technical_owner: 'pozuecoa@ryanair.com'
+product_owner: 'gowinm@ryanair.com'
+
+newrelic_license_key: 'fe38c6a42a3cc7df0306f1f1737e95386fa59d50'
+
+redis_host: "redis.{{ PROJECT | lower }}.{{ ENV | lower }}.{{ VPC | lower }}.ryanair.com"
+
+secure_user: guest
+secure_pass: guest
+
+ryanair_markets_endpoint: "/content/ryanair.markets.json"
+ryanair_markets_refreshMinutes: 60
+ryanair_markets_timeoutSeconds: 10
+

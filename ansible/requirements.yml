@@ -1,0 +1,3 @@
+- src: git+ssh://git@stash.ryanair.com:7999/ryrota/ec2-galaxy.git
+  version : master
+  scm: git

@@ -1,0 +1,136 @@
+##############################
+# ASG Scaling Policies and Alarms
+#############################################################################
+
+DibaRequestCountPerTargetScaleUpPolicy:
+  Type: 'AWS::AutoScaling::ScalingPolicy'
+  Properties:
+    AdjustmentType: PercentChangeInCapacity
+    MinAdjustmentStep: !Ref ASGUpMinAdjustmentStep
+    AutoScalingGroupName: !Ref {{ cf_template_arn_prefix }}AutoScalingGroup
+    Cooldown: 180
+    ScalingAdjustment: 25
+
+DibaRequestCountPerTargetScaleDownPolicy:
+  Type: 'AWS::AutoScaling::ScalingPolicy'
+  Properties:
+    AdjustmentType: PercentChangeInCapacity
+    MinAdjustmentStep: !Ref ASGUpMinAdjustmentStep
+    AutoScalingGroupName: !Ref {{ cf_template_arn_prefix }}AutoScalingGroup
+    Cooldown: 300
+    ScalingAdjustment: -25
+
+DibaHighRequestCountPerTargetAlarm:
+  Type: AWS::CloudWatch::Alarm
+  Properties:
+    AlarmDescription: Notify about High request per target
+    Namespace: AWS/ApplicationELB
+    MetricName: RequestCountPerTarget
+    Dimensions:
+    - Name: LoadBalancer
+      Value: !Join ['/', [
+          'app',
+          !Select [ 2, !Split [ "/", "Fn::ImportValue": '{{ COMPANY }}-{{ VPC }}-{{ PROJECT }}-{{ APP }}-{{ ENV }}-AppLoadBalancer'] ],
+          !Select [ 3, !Split [ "/", "Fn::ImportValue": '{{ COMPANY }}-{{ VPC }}-{{ PROJECT }}-{{ APP }}-{{ ENV }}-AppLoadBalancer'] ]
+      ]]
+    - Name: TargetGroup
+      Value: !Join ['/', [
+          'targetgroup',
+          !Select [ 1, !Split [ "/", "Fn::ImportValue": '{{ COMPANY }}-{{ VPC }}-{{ PROJECT }}-{{ APP }}-{{ ENV }}-AppTargetGroup'] ],
+          !Select [ 2, !Split [ "/", "Fn::ImportValue": '{{ COMPANY }}-{{ VPC }}-{{ PROJECT }}-{{ APP }}-{{ ENV }}-AppTargetGroup'] ]
+      ]]
+    Statistic: Sum
+    Period: '60'
+    EvaluationPeriods: '1'
+    Threshold: {{ diba__autoscaling__high_request_per_target }}
+    ComparisonOperator: GreaterThanOrEqualToThreshold
+    AlarmActions:
+      - !Ref DibaRequestCountPerTargetScaleUpPolicy
+
+DibaLowRequestCountPerTargetAlarm:
+  Type: AWS::CloudWatch::Alarm
+  Properties:
+    AlarmDescription: Notify about Low request per target
+    Namespace: AWS/ApplicationELB
+    MetricName: RequestCountPerTarget
+    Dimensions:
+    - Name: LoadBalancer
+      Value: !Join ['/', [
+          'app',
+          !Select [ 2, !Split [ "/", "Fn::ImportValue": '{{ COMPANY }}-{{ VPC }}-{{ PROJECT }}-{{ APP }}-{{ ENV }}-AppLoadBalancer'] ],
+          !Select [ 3, !Split [ "/", "Fn::ImportValue": '{{ COMPANY }}-{{ VPC }}-{{ PROJECT }}-{{ APP }}-{{ ENV }}-AppLoadBalancer'] ]
+      ]]
+    - Name: TargetGroup
+      Value: !Join ['/', [
+          'targetgroup',
+          !Select [ 1, !Split [ "/", "Fn::ImportValue": '{{ COMPANY }}-{{ VPC }}-{{ PROJECT }}-{{ APP }}-{{ ENV }}-AppTargetGroup'] ],
+          !Select [ 2, !Split [ "/", "Fn::ImportValue": '{{ COMPANY }}-{{ VPC }}-{{ PROJECT }}-{{ APP }}-{{ ENV }}-AppTargetGroup'] ]
+      ]]
+    Statistic: Sum
+    Period: '60'
+    EvaluationPeriods: '15'
+    Threshold: {{ diba__autoscaling__low_request_per_target }}
+    ComparisonOperator: LessThanOrEqualToThreshold
+    AlarmActions:
+      - !Ref DibaRequestCountPerTargetScaleDownPolicy
+
+
+##############################
+# ASG Scaling Policies and Alarms
+#############################################################################
+
+  # Surge Queue Scale Up
+ELBSurgeQueueHighAlarmScaleUpPolicy:
+  Type: 'AWS::AutoScaling::ScalingPolicy'
+  Properties:
+    AdjustmentType: PercentChangeInCapacity
+    MinAdjustmentStep: !Ref ASGUpMinAdjustmentStep
+    AutoScalingGroupName: !Ref {{ cf_template_arn_prefix }}AutoScalingGroup
+    Cooldown: 900
+    ScalingAdjustment: 25
+
+# Surge Queue Alarm
+ELBSurgeQueueHighAlarm:
+  Type: 'AWS::CloudWatch::Alarm'
+  Properties:
+    EvaluationPeriods: 1
+    Statistic: Sum
+    Threshold: 1
+    AlarmDescription: 'Alarm if ELB starts queuing requests'
+    Period: 60
+    AlarmActions:
+    - !Ref ELBSurgeQueueHighAlarmScaleUpPolicy
+    Namespace: 'AWS/ELB'
+    Dimensions:
+    - Name: LoadBalancerName
+      Value: !Join ['-', [!Ref Company, !Ref Project, !Ref Component, !Ref Environment, 'ELBV2']]
+    ComparisonOperator: GreaterThanThreshold
+    MetricName: SurgeQueueLength
+
+# Surge Queue Scale Down
+ELBSurgeQueueLowAlarmScaleDownPolicy:
+  Type: 'AWS::AutoScaling::ScalingPolicy'
+  Properties:
+    AdjustmentType: PercentChangeInCapacity
+    MinAdjustmentStep: !Ref ASGDownMinAdjustmentStep
+    AutoScalingGroupName: !Ref {{ cf_template_arn_prefix }}AutoScalingGroup
+    Cooldown: 300
+    ScalingAdjustment: -25
+
+# Surge Queue Alarm
+ELBSurgeQueueLowAlarm:
+  Type: 'AWS::CloudWatch::Alarm'
+  Properties:
+    EvaluationPeriods: 10
+    Statistic: Sum
+    Threshold: 0
+    AlarmDescription: 'Alarm if ELB surgequeue is empty'
+    Period: 60
+    AlarmActions:
+    - !Ref ELBSurgeQueueLowAlarmScaleDownPolicy
+    Namespace: 'AWS/ELB'
+    Dimensions:
+    - Name: LoadBalancerName
+      Value: !Join ['-', [!Ref Company, !Ref Project, !Ref Environment, 'ELBV2']]
+    ComparisonOperator: LessThanOrEqualToThreshold
+    MetricName: SurgeQueueLength

@@ -1,0 +1,37 @@
+server.port = 8080
+environment = {{ ENV }}
+
+server.isProduction = {{ server_isProduction }}
+app.name=diba-web
+
+# Actuator setup
+management.server.servlet.context-path = /insights
+management.endpoints.web.base-path= /insights
+management.endpoints.web.exposure.include = *
+management.endpoint.health.show-details = WHEN_AUTHORIZED
+
+# Server security
+spring.security.user.name = {{ secure_user }}
+spring.security.user.password = {{ secure_pass }}
+spring.security.user.roles=ACTUATOR
+web.security.ignored = /health,/ping,/app/info,/v*/**,/3/**,/*4/**
+
+#############################
+# Application configuration #
+#############################
+spring.application.name = diba-web
+
+#################
+# Cache config  #
+#################
+spring.redis.cluster.nodes={{ redis_host }}:6379
+spring.redis.timeout=5s
+cache.mode=ALL
+cache.in-memory.enabled=true
+
+# Markets
+ryanair.baseUrl= {{ ryanair_baseUrl }}
+ryanair.markets.endpoint= {{ ryanair_markets_endpoint }}
+ryanair.markets.refreshMinutes= {{ ryanair_markets_refreshMinutes }}
+ryanair.markets.timeoutSeconds= {{ ryanair_markets_timeoutSeconds }}
+

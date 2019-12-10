@@ -1,0 +1,9 @@
+ENV: SIT
+VPC: NONPROD
+
+destroy__deregister_old_amis: yes
+
+server_isProduction: false
+
+ryanair_baseUrl: "https://sit-aem.ryanair.com"
+
