@@ -24,7 +24,7 @@ encrypt_pass: "hub85,salons"
 
 deploy__asg_scheduled_scaling: 'YES'
 
-SHARED_VPC: yes
+SHARED_VPC: no
 
 cf_scaling_groups_template_dir: "{{ playbook_dir }}/../templates"
 instance_unlimited_cpu_credits: true
